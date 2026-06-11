@@ -25,19 +25,54 @@ function escapeHtml(text){
     .replaceAll("'","&#039;");
 }
 
+function decodeQP(text){
+  return String(text || "")
+    .replace(/=\r?\n/g, "")
+    .replace(/=3D/g, "=")
+    .replace(/=20/g, " ")
+    .replace(/=E2=86=92/g, "→")
+    .replace(/=C2=A0/g, " ");
+}
+
+function cleanText(text){
+  return decodeQP(text)
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .replace(/\r/g, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function cleanHtml(html){
+  let h = decodeQP(html || "");
+  h = h.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "");
+  h = h.replace(/<style[\s\S]*?>[\s\S]*?<\/style>/gi, "");
+  h = h.replace(/<\/div>/gi, "</div><br>");
+  return h;
+}
+
 function getFullEmail(){
   const username = document.getElementById("username").value.trim();
   const domain = document.getElementById("domain").value;
   return username ? `${username}@${domain}` : "-";
 }
 
+function saveCurrentEmail(){
+  localStorage.setItem("sheiko_username", document.getElementById("username").value.trim());
+}
+
 function updateCurrentEmail(){
   document.getElementById("currentEmail").textContent = getFullEmail();
+  saveCurrentEmail();
 }
 
 function ambilEmail(){
   const input = document.getElementById("username");
   if(!input.value.trim()) input.value = randomEmailName();
+
   updateCurrentEmail();
   loadEmails();
   showToast("Email aktif: " + getFullEmail());
@@ -60,21 +95,29 @@ async function copyEmail(){
 async function loadEmails(){
   try {
     updateCurrentEmail();
-    document.getElementById("emailList").innerHTML = '<div class="empty">Loading...</div>';
 
-    const res = await fetch(`${API_BASE}/api/inbox?ts=${Date.now()}`);
+    const res = await fetch(`${API_BASE}/api/inbox?ts=${Date.now()}`, {
+      method: "GET",
+      cache: "no-store",
+      headers: {
+        "Cache-Control": "no-cache"
+      }
+    });
+
     const data = await res.json();
-
     const activeEmail = getFullEmail().trim().toLowerCase();
     const inbox = data.inbox || [];
 
-    emails = inbox.filter(email =>
-      String(email.to || "").trim().toLowerCase() === activeEmail
-    );
+    emails = inbox.filter(email => {
+      const to = String(email.to || "").trim().toLowerCase();
+      return to === activeEmail || to.includes(activeEmail);
+    });
 
     renderList();
   } catch (err) {
-    document.getElementById("emailList").innerHTML = '<div class="empty">Gagal mengambil email</div>';
+    console.error(err);
+    document.getElementById("emailList").innerHTML =
+      '<div class="empty">Gagal mengambil email</div>';
     showToast("Gagal mengambil email");
   }
 }
@@ -93,15 +136,21 @@ function renderList(){
     filtered.length ? `${filtered.length} pesan masuk` : "Belum ada pesan masuk";
 
   if(!filtered.length){
-    list.innerHTML = '<div class="empty">Empty Inbox<br><small>Kirim email ke alamat aktif</small></div>';
+    list.innerHTML = `
+      <div class="empty">
+        Empty Inbox<br>
+        <small>Kirim email ke alamat aktif</small>
+      </div>
+    `;
     return;
   }
 
   list.innerHTML = filtered.map(email => `
-    <div class="email-item ${selectedEmail?.id === email.id ? "active" : ""} unread" onclick="openEmail('${email.id}')">
+    <div class="email-item ${selectedEmail?.id === email.id ? "active" : ""} unread"
+      onclick="openEmail('${email.id}')">
       <div class="email-from">${escapeHtml(email.from || "Unknown Sender")}</div>
       <div class="email-subject">${escapeHtml(email.subject || "(No Subject)")}</div>
-      <div class="email-preview">${escapeHtml(email.preview || "")}</div>
+      <div class="email-preview">${escapeHtml(cleanText(email.preview || ""))}</div>
       <div class="email-date">${formatDate(email.receivedAt || email.date)}</div>
     </div>
   `).join("");
@@ -109,7 +158,10 @@ function renderList(){
 
 async function openEmail(id){
   try {
-    const res = await fetch(`${API_BASE}/api/message/${encodeURIComponent(id)}?ts=${Date.now()}`);
+    const res = await fetch(`${API_BASE}/api/message/${encodeURIComponent(id)}?ts=${Date.now()}`, {
+      cache: "no-store"
+    });
+
     const data = await res.json();
 
     if(!data.ok || !data.message){
@@ -121,6 +173,7 @@ async function openEmail(id){
     renderReader(selectedEmail);
     renderList();
   } catch (err) {
+    console.error(err);
     showToast("Gagal membuka email");
   }
 }
@@ -133,9 +186,14 @@ function renderReader(email){
     return;
   }
 
-  const body = email.html
-    ? email.html
-    : `<pre>${escapeHtml(email.text || "Tidak ada isi email")}</pre>`;
+  const text = cleanText(email.text || "");
+  const html = cleanHtml(email.html || "");
+
+  const body = text
+    ? `<pre>${escapeHtml(text)}</pre>`
+    : html
+      ? html
+      : `<pre>Tidak ada isi email</pre>`;
 
   reader.innerHTML = `
     <div class="reader-head">
@@ -165,7 +223,10 @@ function formatDate(date){
   }
 }
 
-document.getElementById("username").value = "test";
+const savedUsername = localStorage.getItem("sheiko_username");
+
+document.getElementById("username").value = savedUsername || "dinda609";
 updateCurrentEmail();
 loadEmails();
-setInterval(loadEmails, 5000);
+
+setInterval(loadEmails, 3000);
