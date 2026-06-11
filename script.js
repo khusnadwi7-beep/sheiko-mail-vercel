@@ -32,13 +32,30 @@ function decodeText(text){
     .replace(/=20/g, " ")
     .replace(/=E2=86=92/g, "→")
     .replace(/=C2=A0/g, " ")
+    .replace(/=C2=A9/g, "©")
+    .replace(/=C2=B7/g, "·")
+    .replace(/=E2=80=94/g, "—")
+    .replace(/=E2=80=99/g, "'")
+    .replace(/=E2=80=9C/g, '"')
+    .replace(/=E2=80=9D/g, '"')
+    .replace(/\r/g, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function cleanHtml(html){
+  return decodeText(html || "")
+    .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[\s\S]*?>[\s\S]*?<\/style>/gi, "");
+}
+
+function textOnly(text){
+  return decodeText(text || "")
     .replace(/<[^>]+>/g, "")
     .replace(/&nbsp;/g, " ")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .replace(/&amp;/g, "&")
-    .replace(/\r/g, "")
-    .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
 
@@ -78,9 +95,8 @@ async function loadEmails(){
   try {
     updateCurrentEmail();
 
-    const list = document.getElementById("emailList");
     if(!emails.length){
-      list.innerHTML = '<div class="empty">Loading...</div>';
+      document.getElementById("emailList").innerHTML = '<div class="empty">Loading...</div>';
     }
 
     const res = await fetch(API_BASE + "/api/inbox?ts=" + Date.now());
@@ -134,7 +150,7 @@ function renderList(){
       onclick="openEmail('${email.id}')">
       <div class="email-from">${escapeHtml(email.from || "Unknown Sender")}</div>
       <div class="email-subject">${escapeHtml(email.subject || "(No Subject)")}</div>
-      <div class="email-preview">${escapeHtml(decodeText(email.preview || ""))}</div>
+      <div class="email-preview">${escapeHtml(textOnly(email.preview || ""))}</div>
       <div class="email-date">${formatDate(email.receivedAt || email.date)}</div>
     </div>
   `).join("");
@@ -172,10 +188,12 @@ function renderReader(email){
     return;
   }
 
-  const text = decodeText(email.text || email.preview || "");
-  const htmlText = decodeText(email.html || "");
+  const html = cleanHtml(email.html || "");
+  const text = textOnly(email.text || email.preview || "");
 
-  const bodyText = text || htmlText || "Tidak ada isi email";
+  const body = html
+    ? html
+    : `<pre>${escapeHtml(text || "Tidak ada isi email")}</pre>`;
 
   reader.innerHTML = `
     <div class="reader-head">
@@ -186,9 +204,7 @@ function renderReader(email){
         Tanggal: ${escapeHtml(formatDate(email.receivedAt || email.date))}
       </div>
     </div>
-    <div class="mail-body">
-      <pre>${escapeHtml(bodyText)}</pre>
-    </div>
+    <div class="mail-body email-html">${body}</div>
   `;
 }
 
