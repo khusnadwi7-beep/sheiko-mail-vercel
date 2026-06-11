@@ -306,3 +306,30 @@ button:active,
   }
   .reader{min-height:520px}
 }
+
+.email-html{
+  overflow:auto;
+}
+
+.email-html img{
+  max-width:100%;
+  height:auto;
+  border-radius:12px;
+  display:block;
+  margin:12px 0;
+}
+
+.email-html a{
+  color:#2563eb;
+  font-weight:700;
+  word-break:break-all;
+}
+
+.email-html table{
+  max-width:100%;
+}
+
+.mail-body pre{
+  white-space:pre-wrap;
+  font-family:Arial,sans-serif;
+}
