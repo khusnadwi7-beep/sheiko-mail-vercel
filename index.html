@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sheiko Mail</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div class="toast" id="toast"></div>
+
+<div class="app">
+  <aside class="sidebar card">
+    <div class="brand">
+      <div class="logo">S</div>
+      <div>
+        <h1>SHEIKO<br>MAIL</h1>
+        <span>TEMPORARY INBOX</span>
+      </div>
+    </div>
+
+    <div class="current-email" id="currentEmail">-</div>
+
+    <label>ALAMAT EMAIL</label>
+    <input id="username" placeholder="nama.email" oninput="updateCurrentEmail()" />
+
+    <label>PILIH DOMAIN</label>
+    <select id="domain" onchange="updateCurrentEmail();loadEmails()">
+      <option value="sheikoshop.my.id">sheikoshop.my.id</option>
+    </select>
+
+    <button class="main-btn" onclick="ambilEmail()">AMBIL EMAIL</button>
+
+    <div class="actions">
+      <button class="action-btn" onclick="copyEmail()"><div class="icon">⧉</div>Copy</button>
+      <button class="action-btn" onclick="loadEmails()"><div class="icon">↻</div>Refresh</button>
+      <button class="action-btn" onclick="newEmail()"><div class="icon">⊞</div>New</button>
+      <button class="action-btn" onclick="clearReader()"><div class="icon">✕</div>Close</button>
+    </div>
+  </aside>
+
+  <section class="list-panel card">
+    <div class="list-header">
+      <h2>Kotak Masuk</h2>
+      <p id="countText">Belum ada pesan masuk</p>
+    </div>
+
+    <div class="search-box">
+      <input id="search" placeholder="Cari email..." oninput="renderList()" />
+    </div>
+
+    <div class="email-list" id="emailList">
+      <div class="empty">Empty Inbox</div>
+    </div>
+  </section>
+
+  <main class="reader card" id="reader">
+    <div class="reader-empty">Pilih pesan untuk membaca email</div>
+  </main>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
