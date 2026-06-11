@@ -227,4 +227,4 @@ document.getElementById("username").value = "dinda609";
 updateCurrentEmail();
 loadEmails();
 
-setInterval(loadEmails, 5000);
+setInterval(loadEmails, 2000);
